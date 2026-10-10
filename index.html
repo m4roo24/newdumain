@@ -1,53 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- ======== ANTI-DEVELOPER-TOOLS PROTECTION (safe version) ======== -->
-<script>
-(function(){
-  'use strict';
-  var TRIGGERED = false;
-  function killPage(){
-    if (TRIGGERED) return;
-    TRIGGERED = true;
-    try { window.stop(); } catch(e){}
-    location.replace('about:blank');
-  }
-
-  // 1) Block DevTools keyboard shortcuts ONLY (reliable trigger)
-  document.addEventListener('keydown', function(e){
-    var k = e.keyCode || e.which;
-    var ctrl = e.ctrlKey || e.metaKey;
-    if (k === 123) { e.preventDefault(); e.stopPropagation(); killPage(); }                 // F12
-    if (ctrl && e.shiftKey && (k===73 || k===74 || k===67)) { e.preventDefault(); e.stopPropagation(); killPage(); } // Ctrl+Shift+I/J/C
-    if (ctrl && k===85) { e.preventDefault(); }                                            // Ctrl+U
-  }, true);
-
-  // 2) Right-click block
-  document.addEventListener('contextmenu', function(e){ e.preventDefault(); }, true);
-
-  // 3) Window-size heuristic — DESKTOP ONLY (mobile falsely triggers this)
-  if (window.matchMedia && window.matchMedia('(pointer:fine)').matches) {
-    var sizeHits = 0;
-    setInterval(function(){
-      var w = window.outerWidth  - window.innerWidth  > 200;
-      var h = window.outerHeight - window.innerHeight > 200;
-      sizeHits = (w || h) ? sizeHits + 1 : 0;
-      if (sizeHits >= 2) killPage();  // must persist ~2 seconds
-    }, 1000);
-  }
-
-  // 4) debugger timing trap — needs 2 consecutive slow hits
-  var debugHits = 0;
-  setInterval(function(){
-    var t = performance.now();
-    (function(){ debugger; })();
-    var d = performance.now() - t;
-    debugHits = (d > 250) ? debugHits + 1 : 0;
-    if (debugHits >= 2) killPage();
-  }, 1200);
-})();
-</script>
-<!-- ======== END PROTECTION ======== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="msapplication-TileColor" content="#7c3aed">
@@ -1183,7 +1136,52 @@ body{background-attachment:fixed;background-repeat:no-repeat;background-image:ra
 
     <script>
     // ===================== CHANNELS =====================
-    let channels = [];
+    let channels = [
+        { name: 'Biner TV', url: 'https://lbgo.bozztv.com/ssh101/live/biner-zaxo/playlist.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/binertv.png' },
+        { name: 'AVA Sport', url: 'http://avrstream.com:1935/live/AvaSport/tracks-v1a1/mono.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/ava-sport.png' },
+        { name: 'NRT Sport', url: 'http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/280437.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/nrt1-sport.png' },
+        { name: 'Dasinya Sport', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/689911.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/dasinyasport.png' },
+        { name: 'LD Sport', url: 'http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/280502.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/ldsport.png' },
+        { name: 'Duhok Sport', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/689913.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/duhoksport.png' },
+        { name: 'Zaxo Sport', url: 'http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/280431.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/zaxosport.png' },
+        { name: 'Astera Sport', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/689910.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/asterasport1.png' },
+        { name: 'Aso Sport', url: 'http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/456256.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/asosport.png' },
+        { name: 'Gewher Sport', url: 'https://cdn.karwan.tv/gewher-sport/index.m3u8', category: 'Kurdish Sports', needsProxy: true, logo: 'https://kurdsport.online/gewhersport.png' },
+        { name: 'Bein Sport 1', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/110.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport1.png' },
+        { name: 'Bein Sport 2', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/111.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport2.png' },
+        { name: 'Bein Sport 3', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/112.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport3.png' },
+        { name: 'Bein Sport 4', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/113.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport4.png' },
+        { name: 'Bein Sport 5', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/114.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport5.png' },
+        { name: 'Bein Sport 6', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/115.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport6.png' },
+        { name: 'Bein Sport 7', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/116.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport7.png' },
+        { name: 'Bein Sport 8', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/117.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport8.png' },
+        { name: 'Bein Sport 9', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/118.m3u8', category: 'BeIN Sports', needsProxy: true, logo: 'https://kurdsport.online/beinsport9.png' },
+        { name: 'Alwan Sport 1', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641618.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 2', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641619.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 3', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641620.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 4', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641621.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 5', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641622.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 6', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641623.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 7', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641611.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 8', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641612.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 9', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641613.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport 10', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641614.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport F1', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641616.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport UFC', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641615.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },
+        { name: 'Alwan Sport WWE', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641617.m3u8', category: 'Alwan Sports', needsProxy: true, logo: 'https://kurdsport.online/Alwan-sport.png' },    
+        { name: 'AD Sport 1', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/200.m3u8', category: 'Starzplay Sports', needsProxy: true, logo: 'https://kurdsport.online/abudhabi1.png' },
+        { name: 'AD Sport 2', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/201.m3u8', category: 'Starzplay Sports', needsProxy: true, logo: 'https://kurdsport.online/abudhabi2.png' },
+        { name: 'Starzplay Sport 1', url: 'http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/1173275.m3u8', category: 'Starzplay Sports', needsProxy: true, logo: 'https://kurdsport.online/starzsport.png' },
+        { name: 'Starzplay Sport 2', url: 'http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/205.m3u8', category: 'Starzplay Sports', needsProxy: true, logo: 'https://kurdsport.online/starzsport.png' },
+        { name: 'Starzplay Sport 3', url: 'http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/252720.m3u8', category: 'Starzplay Sports', needsProxy: true, logo: 'https://kurdsport.online/starzsport.png' },
+        { name: 'ToFi Sport 1', url: 'https://cdn.gamhed.online/hls/bein1.m3u8', category: 'Tofi Sports', needsProxy: true, logo: 'https://kurdsport.online/tofisports.png' },
+        { name: 'ToFi Sport 2', url: 'https://cdn.gamhed.online/hls/bein2.m3u8', category: 'Tofi Sports', needsProxy: true, logo: 'https://kurdsport.online/tofisports.png' },
+        { name: 'Al Iraqya Sport', url: 'http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/14284.m3u8', category: 'Global Sports', needsProxy: true, logo: 'https://kurdsport.online/aliraq.png' },
+        { name: 'GEM Sport', url: 'https://northtelecom.b-cdn.net/GEMSPORTHD/1_1001_Video.m3u8', category: 'Global Sports', needsProxy: false, logo: 'https://kurdsport.online/gemsport.png' },
+        { name: 'Arda Spor', url: 'https://ladyboy.yedektv.cfd//hls/bein1.m3u8', category: 'Global Sports', needsProxy: true, logo: 'https://kurdsport.online/ardaspor.png' },
+        { name: 'TNT Sport', url: 'http://195.178.110.110/tntsports/index.m3u8', category: 'Global Sports', needsProxy: true, logo: 'https://kurdsport.online/tntsport.png' },
+                
+    ];
 
     let categories = ["All"];
     let activeCategory = "All";
@@ -4226,47 +4224,298 @@ document.addEventListener('DOMContentLoaded', function(){
   check();
 })();
 </script>
-
-<!-- ======== LIVE UPDATE SYSTEM (no refresh needed) ======== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-(function(){
-  var LIVE_SIG = null, SITE_VERSION = null;
-  function getCustom(){ try { return channels.filter(function(c){ return c.isCustom; }); } catch(e){ return []; } }
-  function applyUpdate(list){
-    try {
-      var customs = getCustom();
-      channels = list.concat(customs);
-      if (typeof mergeCustomChannels === 'function') mergeCustomChannels();
-      if (typeof renderChannels === 'function') renderChannels();
-      if (typeof renderHomeGrid === 'function') renderHomeGrid();
-      if (typeof renderCategoryTabs === 'function') renderCategoryTabs();
-    } catch(e){}
+
+/* ============================================================
+   Kurd Sport — Owner Admin Panel + Live Channel Sync  (inline)
+   Fill in the two keys below after creating your Supabase project.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ========== 1. PASTE YOUR SUPABASE KEYS HERE ========== */
+  const SUPABASE_URL = 'https://iuhbzwnilphsoihbnrig.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_QDQmXubEbAJRkNwCQ9A70A_TiCuHbJx';
+  /* ====================================================== */
+
+  const KS_CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && SUPABASE_ANON_KEY.length > 40;
+
+  let sb = null;
+  if (KS_CONFIGURED && window.supabase) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
-  async function poll(){
-    if (typeof channels === 'undefined') return;
+
+  let ownerPassword = null;
+  let remoteChannels = [];
+
+  /* ========== 2. Live channel state -> your existing UI ========== */
+  function applyRemote(list) {
+    remoteChannels = list.slice().sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
+    if (!KS_CONFIGURED) return;
+    // Map cloud rows onto the site's existing channel format
+    const mapped = remoteChannels.filter(c => c.is_active).map(c => ({
+      name: c.name,
+      url: c.stream_url,
+      logo: c.logo_url || '',
+      category: c.category || 'Sports',
+      needsProxy: true
+    }));
     try {
-      var rc = await fetch('/channels.json?ts=' + Date.now(), {cache:'no-store'});
-      if (rc.ok) {
-        var list = await rc.json();
-        var sig = JSON.stringify(list);
-        if (LIVE_SIG === null) { LIVE_SIG = sig; if (list.length) applyUpdate(list); }
-        else if (sig !== LIVE_SIG) { LIVE_SIG = sig; applyUpdate(list); }
+      if (typeof channels !== 'undefined') {
+        channels = mapped;
+        if (typeof currentChannelIndex !== 'undefined' && currentChannelIndex >= channels.length) currentChannelIndex = 0;
+        if (typeof renderHomeTabs === 'function') renderHomeTabs();
+        if (typeof renderHomeGrid === 'function') renderHomeGrid();
+        if (typeof renderCategoryTabs === 'function') renderCategoryTabs();
+        if (typeof renderChannels === 'function') renderChannels();
+        const cnt = document.querySelector('.channel-count');
+        if (cnt) cnt.textContent = channels.length;
       }
-    } catch(e){}
-    try {
-      var rv = await fetch('/version.json?ts=' + Date.now(), {cache:'no-store'});
-      if (rv.ok) {
-        var v = (await rv.json()).v;
-        if (SITE_VERSION === null) SITE_VERSION = v;
-        else if (v !== SITE_VERSION) { location.reload(); return; }
-      }
-    } catch(e){}
+    } catch (e) { console.error('applyRemote:', e); }
+    window.dispatchEvent(new CustomEvent('ks:channels', { detail: remoteChannels }));
   }
-  poll();
-  setInterval(poll, 20000);
-  document.addEventListener('visibilitychange', function(){ if (!document.hidden) poll(); });
+  window.applyRemoteChannels = applyRemote;
+
+  async function loadChannels() {
+    if (!sb) return;
+    const { data, error } = await sb.from('channels').select('*').order('sort_order');
+    if (error) { console.error('loadChannels:', error.message); return; }
+    applyRemote(data || []);
+  }
+
+  if (sb) {
+    // Live channel add/edit/delete -> all visitors update instantly
+    sb.channel('ks-live-channels')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'channels' }, () => loadChannels())
+      .subscribe();
+    // Owner "Refresh All Visitors" -> everyone's page reloads
+    sb.channel('ks-site-commands')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'site_commands' }, payload => {
+        const cmd = payload.new;
+        if (cmd.command === 'reload' && (Date.now() - new Date(cmd.created_at).getTime()) < 15000) {
+          location.reload();
+        }
+      })
+      .subscribe();
+    loadChannels();
+  }
+
+  /* ========== 3. Owner panel UI ========== */
+  const CSS = `
+  .ks-owner-fab{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));inset-inline-start:calc(20px + env(safe-area-inset-left,0px));z-index:9700;width:50px;height:50px;border-radius:50%;border:1px solid rgba(245,158,11,.4);cursor:pointer;color:#f59e0b;font-size:1rem;background:rgba(245,158,11,.12);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .ks-owner-fab:hover{background:rgba(245,158,11,.25);transform:scale(1.06)}
+  .ks-owner-overlay{position:fixed;inset:0;background:rgba(3,2,8,.7);backdrop-filter:blur(10px);z-index:9800;display:none;align-items:center;justify-content:center;padding:16px}
+  .ks-owner-overlay.show{display:flex}
+  .ks-owner-panel{background:var(--bg-2,#0f0a1e);border:1px solid var(--accent-border,rgba(139,92,246,.28));border-radius:22px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+  .ks-owner-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border,rgba(139,92,246,.16))}
+  .ks-owner-head h2{font-size:1rem;font-weight:800;color:#f59e0b;display:flex;gap:9px;align-items:center;margin:0}
+  .ks-owner-body{padding:18px 20px;overflow-y:auto}
+  .ks-owner-body::-webkit-scrollbar{width:6px}
+  .ks-owner-body::-webkit-scrollbar-thumb{background:var(--border,rgba(139,92,246,.16));border-radius:3px}
+  .ks-in{width:100%;background:var(--input,rgba(255,255,255,.07));border:1px solid var(--border,rgba(139,92,246,.16));border-radius:12px;padding:11px 14px;color:var(--text,#fff);font-size:15px;outline:none;margin-bottom:10px}
+  .ks-in:focus{border-color:var(--accent,#8b5cf6)}
+  .ks-btn{background:linear-gradient(135deg,var(--accent,#8b5cf6),var(--accent-2,#7c3aed));color:#fff;border:none;padding:11px 18px;border-radius:12px;font-weight:700;font-size:.85rem;cursor:pointer;transition:filter .2s}
+  .ks-btn:hover{filter:brightness(1.12)}
+  .ks-btn.sm{padding:6px 12px;font-size:.75rem;border-radius:9px}
+  .ks-btn.danger{background:rgba(239,68,68,.15);color:var(--live,#ef4444);border:1px solid rgba(239,68,68,.35)}
+  .ks-btn.ghost{background:var(--input,rgba(255,255,255,.07));color:var(--text-2,#b6b3c6);border:1px solid var(--border,rgba(139,92,246,.16))}
+  .ks-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){.ks-row{grid-template-columns:1fr}}
+  .ks-chan{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border,rgba(139,92,246,.16));border-radius:14px;margin-bottom:8px;background:var(--card,rgba(255,255,255,.045))}
+  .ks-chan img{width:56px;height:32px;object-fit:contain;border-radius:8px;background:rgba(0,0,0,.3);flex-shrink:0}
+  .ks-chan .ks-meta{flex:1;min-width:0}
+  .ks-chan .ks-meta b{font-size:.84rem;color:var(--text,#fff);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ks-chan .ks-meta span{font-size:.72rem;color:var(--text-3,#7d7a92)}
+  .ks-badge{font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:999px}
+  .ks-badge.on{background:rgba(34,197,94,.14);color:#22c55e}
+  .ks-badge.off{background:rgba(239,68,68,.14);color:#ef4444}
+  .ks-msg{font-size:.8rem;margin:8px 0;display:none}
+  .ks-msg.err{display:block;color:var(--live,#ef4444)}
+  .ks-msg.ok{display:block;color:#22c55e}
+  .ks-edit{display:none;margin-top:10px;padding:14px;border:1px dashed var(--accent-border,rgba(139,92,246,.28));border-radius:14px}
+  .ks-edit.show{display:block}
+  .ks-livepill{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;color:#22c55e}
+  .ks-livepill::before{content:'';width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:ksPulse 1.4s infinite}
+  @keyframes ksPulse{50%{opacity:.35}}`;
+  const style = document.createElement('style');
+  style.textContent = CSS;
+  document.head.appendChild(style);
+
+  const fab = document.createElement('button');
+  fab.className = 'ks-owner-fab';
+  fab.title = 'Owner Panel';
+  fab.innerHTML = '<i class="fas fa-user-shield"></i>';
+  document.body.appendChild(fab);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'ks-owner-overlay';
+  overlay.innerHTML = `
+    <div class="ks-owner-panel">
+      <div class="ks-owner-head">
+        <h2><i class="fas fa-crown"></i> Owner Panel</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="ks-livepill">LIVE SYNC</span>
+          <button class="ks-btn ghost sm" id="ksClose"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div class="ks-owner-body" id="ksBody"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const body = overlay.querySelector('#ksBody');
+  fab.onclick = () => { overlay.classList.add('show'); render(); };
+  overlay.querySelector('#ksClose').onclick = () => overlay.classList.remove('show');
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+
+  function notConfiguredView() {
+    body.innerHTML = `
+      <p style="font-size:.85rem;color:var(--text-2,#b6b3c6);line-height:1.6">
+        <b style="color:#f59e0b">Setup needed.</b> Open this file's code, find
+        <code style="background:var(--input);padding:2px 6px;border-radius:6px">PASTE YOUR SUPABASE KEYS HERE</code>
+        and enter your Project URL + anon key. Then run <code style="background:var(--input);padding:2px 6px;border-radius:6px">supabase_schema.sql</code>
+        in the Supabase SQL Editor.</p>`;
+  }
+
+  function loginView(msg) {
+    body.innerHTML = `
+      <p style="font-size:.82rem;color:var(--text-3,#7d7a92);margin:0 0 14px">Log in to manage channels. Every change goes live for all visitors instantly.</p>
+      <input class="ks-in" type="password" id="ksPass" placeholder="Owner password" autocomplete="current-password">
+      <div class="ks-msg" id="ksMsg"></div>
+      <button class="ks-btn" id="ksLogin" style="width:100%"><i class="fas fa-unlock"></i> Log in</button>`;
+    const msgEl = body.querySelector('#ksMsg');
+    if (msg) { msgEl.textContent = msg; msgEl.className = 'ks-msg err'; }
+    const tryLogin = async () => {
+      const pass = body.querySelector('#ksPass').value;
+      const btn = body.querySelector('#ksLogin');
+      btn.disabled = true;
+      const { data, error } = await sb.rpc('owner_check_password', { p_password: pass });
+      btn.disabled = false;
+      if (error) { msgEl.textContent = 'Error: ' + error.message; msgEl.className = 'ks-msg err'; return; }
+      if (data === true) { ownerPassword = pass; render(); }
+      else { msgEl.textContent = 'Wrong password.'; msgEl.className = 'ks-msg err'; }
+    };
+    body.querySelector('#ksLogin').onclick = tryLogin;
+    body.querySelector('#ksPass').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+    body.querySelector('#ksPass').focus();
+  }
+
+  function editForm(ch) {
+    const isNew = !ch;
+    const c = ch || { name: '', stream_url: '', logo_url: '', category: 'Sports', is_active: true, sort_order: 0 };
+    return `
+      <div class="ks-edit show">
+        <div class="ks-row">
+          <input class="ks-in" id="ksName" placeholder="Channel name *" value="${esc(c.name)}">
+          <input class="ks-in" id="ksCat" placeholder="Category (e.g. Kurdish Sports)" value="${esc(c.category)}">
+        </div>
+        <input class="ks-in" id="ksUrl" placeholder="Stream URL (m3u8 / mp4) *" value="${esc(c.stream_url)}">
+        <div class="ks-row">
+          <input class="ks-in" id="ksLogo" placeholder="Logo URL (optional)" value="${esc(c.logo_url)}">
+          <input class="ks-in" id="ksSort" type="number" placeholder="Sort order" value="${c.sort_order}">
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--text-2,#b6b3c6);margin-bottom:12px;cursor:pointer">
+          <input type="checkbox" id="ksActive" ${c.is_active ? 'checked' : ''}> Channel is live (visible)
+        </label>
+        <div class="ks-msg" id="ksFormMsg"></div>
+        <div style="display:flex;gap:10px">
+          <button class="ks-btn" id="ksSave"><i class="fas fa-save"></i> ${isNew ? 'Add Channel' : 'Save Changes'}</button>
+          <button class="ks-btn ghost" id="ksCancel">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function listView() {
+    const rows = remoteChannels.map(c => `
+      <div class="ks-chan">
+        ${c.logo_url ? `<img src="${esc(c.logo_url)}" onerror="this.style.visibility='hidden'">` : '<div style="width:56px"></div>'}
+        <div class="ks-meta"><b>${esc(c.name)}</b><span>${esc(c.category)} · ${esc(c.stream_url).slice(0, 60)}</span></div>
+        <span class="ks-badge ${c.is_active ? 'on' : 'off'}">${c.is_active ? 'LIVE' : 'OFF'}</span>
+        <button class="ks-btn sm ghost" data-edit="${c.id}"><i class="fas fa-pen"></i></button>
+        <button class="ks-btn sm danger" data-del="${c.id}"><i class="fas fa-trash"></i></button>
+      </div>`).join('');
+
+    body.innerHTML = `
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="ks-btn" id="ksAdd"><i class="fas fa-plus"></i> Add Channel</button>
+        <button class="ks-btn ghost" id="ksRefresh" title="Force-reload the website on every visitor's device"><i class="fas fa-tower-broadcast"></i> Refresh All Visitors</button>
+        <button class="ks-btn ghost" id="ksReloadList"><i class="fas fa-rotate"></i></button>
+        <button class="ks-btn ghost" id="ksLogout" style="margin-inline-start:auto"><i class="fas fa-right-from-bracket"></i> Log out</button>
+      </div>
+      <div class="ks-msg" id="ksListMsg"></div>
+      <div id="ksFormSlot"></div>
+      <div>${rows || '<p style="color:var(--text-3,#7d7a92);font-size:.82rem">No channels yet — add your first one above.</p>'}</div>`;
+
+    body.querySelector('#ksAdd').onclick = () => {
+      body.querySelector('#ksFormSlot').innerHTML = editForm(null);
+      wireForm(null);
+    };
+    body.querySelector('#ksReloadList').onclick = async () => { await loadChannels(); listView(); };
+    body.querySelector('#ksRefresh').onclick = async () => {
+      const btn = body.querySelector('#ksRefresh');
+      const msgEl = body.querySelector('#ksListMsg');
+      btn.disabled = true;
+      const { error } = await sb.rpc('owner_broadcast_command', { p_password: ownerPassword, p_command: 'reload' });
+      btn.disabled = false;
+      if (error) { msgEl.textContent = 'Broadcast failed: ' + error.message; msgEl.className = 'ks-msg err'; return; }
+      msgEl.textContent = 'Reload command sent to ALL visitors — every open page refreshes within seconds (yours too).';
+      msgEl.className = 'ks-msg ok';
+    };
+    body.querySelector('#ksLogout').onclick = () => { ownerPassword = null; render(); };
+    body.querySelectorAll('[data-edit]').forEach(btn => btn.onclick = () => {
+      const ch = remoteChannels.find(c => c.id == btn.dataset.edit);
+      body.querySelector('#ksFormSlot').innerHTML = editForm(ch);
+      wireForm(ch);
+    });
+    body.querySelectorAll('[data-del]').forEach(btn => btn.onclick = async () => {
+      const ch = remoteChannels.find(c => c.id == btn.dataset.del);
+      if (!confirm(`Delete "${ch.name}"? This removes it live for all visitors.`)) return;
+      const msgEl = body.querySelector('#ksListMsg');
+      const { error } = await sb.rpc('owner_delete_channel', { p_password: ownerPassword, p_id: ch.id });
+      if (error) { msgEl.textContent = 'Delete failed: ' + error.message; msgEl.className = 'ks-msg err'; return; }
+      await loadChannels(); listView();
+    });
+  }
+
+  function wireForm(ch) {
+    const msgEl = body.querySelector('#ksFormMsg');
+    body.querySelector('#ksCancel').onclick = () => { body.querySelector('#ksFormSlot').innerHTML = ''; };
+    body.querySelector('#ksSave').onclick = async () => {
+      const payload = {
+        p_password: ownerPassword,
+        p_id: ch ? ch.id : null,
+        p_name: body.querySelector('#ksName').value.trim(),
+        p_stream_url: body.querySelector('#ksUrl').value.trim(),
+        p_logo_url: body.querySelector('#ksLogo').value.trim(),
+        p_category: body.querySelector('#ksCat').value.trim() || 'Sports',
+        p_is_active: body.querySelector('#ksActive').checked,
+        p_sort_order: parseInt(body.querySelector('#ksSort').value || '0', 10)
+      };
+      if (!payload.p_name || !payload.p_stream_url) {
+        msgEl.textContent = 'Name and Stream URL are required.'; msgEl.className = 'ks-msg err'; return;
+      }
+      const btn = body.querySelector('#ksSave');
+      btn.disabled = true;
+      const { error } = await sb.rpc('owner_upsert_channel', payload);
+      btn.disabled = false;
+      if (error) { msgEl.textContent = 'Save failed: ' + error.message; msgEl.className = 'ks-msg err'; return; }
+      msgEl.textContent = 'Saved — pushing live to all visitors…'; msgEl.className = 'ks-msg ok';
+      await loadChannels(); listView();
+    };
+  }
+
+  function render() {
+    if (!KS_CONFIGURED) { notConfiguredView(); return; }
+    if (ownerPassword) listView(); else loginView();
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+
+  window.KSOwner = { getChannels: () => remoteChannels.slice(), reload: loadChannels };
 })();
+
 </script>
-<!-- ======== END LIVE UPDATE ======== -->
 </body>
 </html>
