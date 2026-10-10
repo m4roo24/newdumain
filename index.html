@@ -4253,6 +4253,44 @@ document.addEventListener('DOMContentLoaded', function(){
 
   let remoteChannels = [];
 
+  /* Rebuild homepage tabs + grid (site's own renderHomeGrid is IIFE-local) */
+  function refreshHome() {
+    try {
+      if (typeof channels === 'undefined') return;
+      if (typeof window.__ksHomeCat === 'undefined') window.__ksHomeCat = 'All';
+      const cats = ['All', ...new Set(channels.map(c => c.category))];
+      if (!cats.includes(window.__ksHomeCat)) window.__ksHomeCat = 'All';
+      const tabsEl = document.getElementById('homeCategoryTabs');
+      if (tabsEl) {
+        tabsEl.innerHTML = '';
+        cats.forEach(cat => {
+          const btn = document.createElement('button');
+          btn.className = 'home-tab' + (cat === window.__ksHomeCat ? ' active' : '');
+          btn.textContent = cat;
+          btn.onclick = () => { window.__ksHomeCat = cat; refreshHome(); };
+          tabsEl.appendChild(btn);
+        });
+      }
+      const grid = document.getElementById('channelGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      const filtered = window.__ksHomeCat === 'All' ? channels : channels.filter(ch => ch.category === window.__ksHomeCat);
+      filtered.forEach(ch => {
+        const idx = channels.indexOf(ch);
+        const card = document.createElement('div');
+        card.className = 'grid-card';
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('role', 'button');
+        const logoHtml = ch.logo
+          ? '<img src="' + ch.logo + '" alt="' + ch.name + '" loading="lazy" decoding="async" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<span class=grid-emoji>⚽️</span>\'">'
+          : '<span class="grid-emoji">⚽️</span>';
+        card.innerHTML = '<div class="grid-icon">' + logoHtml + '</div><div class="grid-name">' + ch.name + '</div>';
+        card.onclick = () => { if (typeof window.loadChannel === 'function') window.loadChannel(idx); };
+        grid.appendChild(card);
+      });
+    } catch (e) { console.error('refreshHome:', e); }
+  }
+
   function applyRemote(list) {
     remoteChannels = list.slice().sort((a, b) => (a.sort_order - b.sort_order) || String(a.name).localeCompare(b.name));
     if (!KS_CONFIGURED) return;
@@ -4264,8 +4302,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (typeof channels !== 'undefined') {
         channels = mapped;
         if (typeof currentChannelIndex !== 'undefined' && currentChannelIndex >= channels.length) currentChannelIndex = 0;
-        if (typeof renderHomeTabs === 'function') renderHomeTabs();
-        if (typeof renderHomeGrid === 'function') renderHomeGrid();
+        refreshHome();
         if (typeof renderCategoryTabs === 'function') renderCategoryTabs();
         if (typeof renderChannels === 'function') renderChannels();
         const cnt = document.querySelector('.channel-count');
