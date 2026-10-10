@@ -4300,7 +4300,7 @@ document.addEventListener('DOMContentLoaded', function(){
     db.ref('channels').once('value', snap => {
       if (snap.exists()) return;
       const batch = {};
-      {name:"Biner TV",stream_url:"https://lbgo.bozztv.com/ssh101/live/biner-zaxo/playlist.m3u8",logo_url:"https://kurdsport.online/binertv.png",category:"Kurdish Sports",is_active:true,sort_order:0},
+      [{name:"Biner TV",stream_url:"https://lbgo.bozztv.com/ssh101/live/biner-zaxo/playlist.m3u8",logo_url:"https://kurdsport.online/binertv.png",category:"Kurdish Sports",is_active:true,sort_order:0},
         {name:"AVA Sport",stream_url:"http://avrstream.com:1935/live/AvaSport/tracks-v1a1/mono.m3u8",logo_url:"https://kurdsport.online/ava-sport.png",category:"Kurdish Sports",is_active:true,sort_order:1},
         {name:"NRT Sport",stream_url:"http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/280437.m3u8",logo_url:"https://kurdsport.online/nrt1-sport.png",category:"Kurdish Sports",is_active:true,sort_order:2},
         {name:"Dasinya Sport",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/689911.m3u8",logo_url:"https://kurdsport.online/dasinyasport.png",category:"Kurdish Sports",is_active:true,sort_order:3},
@@ -4342,7 +4342,7 @@ document.addEventListener('DOMContentLoaded', function(){
         {name:"Al Iraqya Sport",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/14284.m3u8",logo_url:"https://kurdsport.online/aliraq.png",category:"Global Sports",is_active:true,sort_order:39},
         {name:"GEM Sport",stream_url:"https://northtelecom.b-cdn.net/GEMSPORTHD/1_1001_Video.m3u8",logo_url:"https://kurdsport.online/gemsport.png",category:"Global Sports",is_active:true,sort_order:40},
         {name:"Arda Spor",stream_url:"https://ladyboy.yedektv.cfd//hls/bein1.m3u8",logo_url:"https://kurdsport.online/ardaspor.png",category:"Global Sports",is_active:true,sort_order:41},
-        {name:"TNT Sport",stream_url:"http://195.178.110.110/tntsports/index.m3u8",logo_url:"https://kurdsport.online/tntsport.png",category:"Global Sports",is_active:true,sort_order:42}.forEach(rec => {
+        {name:"TNT Sport",stream_url:"http://195.178.110.110/tntsports/index.m3u8",logo_url:"https://kurdsport.online/tntsport.png",category:"Global Sports",is_active:true,sort_order:42}].forEach(rec => {
         const ref = db.ref('channels').push();
         batch[ref.key] = { ...rec, id: ref.key };
       });
@@ -4568,5 +4568,6 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 
 </script>
+
 </body>
 </html>
