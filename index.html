@@ -4224,42 +4224,50 @@ document.addEventListener('DOMContentLoaded', function(){
   check();
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 
 /* ============================================================
-   Kurd Sport — Owner Admin Panel + Live Channel Sync  (inline)
-   Fill in the two keys below after creating your Supabase project.
+   Kurd Sport — Owner Panel + Live Channel Sync  (FIREBASE)
+   Fill in the 5 config values below (Firebase console).
    ============================================================ */
 (function () {
   'use strict';
 
-  /* ========== 1. PASTE YOUR SUPABASE KEYS HERE ========== */
-  const SUPABASE_URL = 'https://iuhbzwnilphsoihbnrig.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_QDQmXubEbAJRkNwCQ9A70A_TiCuHbJx';
-  /* ====================================================== */
+  /* ========== 1. PASTE YOUR FIREBASE CONFIG HERE ==========
+     Firebase console → Project settings → "Your apps" → web app
+     → SDK setup and configuration → config object.          */
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAJcKtLCAnup-vCwZNg4ivntweck73Wzgk",
+    authDomain: "kurdsport12-2ab6a.firebaseapp.com",
+    databaseURL: "https://kurdsport12-2ab6a-default-rtdb.firebaseio.com",
+    projectId: "kurdsport12-2ab6a"
+  };
+  // Owner login email — the password is your Firebase account password
+  const OWNER_EMAIL = "";
+  /* ======================================================== */
 
-  const KS_CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && SUPABASE_ANON_KEY.length > 40;
+  const KS_CONFIGURED = !FIREBASE_CONFIG.apiKey.includes('PASTE') &&
+                        !FIREBASE_CONFIG.databaseURL.includes('PASTE');
 
-  let sb = null;
-  if (KS_CONFIGURED && window.supabase) {
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let auth = null, db = null;
+  if (KS_CONFIGURED && window.firebase) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    auth = firebase.auth();
+    db = firebase.database();
   }
 
-  let ownerPassword = null;
   let remoteChannels = [];
 
   /* ========== 2. Live channel state -> your existing UI ========== */
   function applyRemote(list) {
-    remoteChannels = list.slice().sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
+    remoteChannels = list.slice().sort((a, b) => (a.sort_order - b.sort_order) || String(a.name).localeCompare(b.name));
     if (!KS_CONFIGURED) return;
-    // Map cloud rows onto the site's existing channel format
     const mapped = remoteChannels.filter(c => c.is_active).map(c => ({
-      name: c.name,
-      url: c.stream_url,
-      logo: c.logo_url || '',
-      category: c.category || 'Sports',
-      needsProxy: true
+      name: c.name, url: c.stream_url, logo: c.logo_url || '',
+      category: c.category || 'Sports', needsProxy: true
     }));
     try {
       if (typeof channels !== 'undefined') {
@@ -4277,28 +4285,27 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   window.applyRemoteChannels = applyRemote;
 
-  async function loadChannels() {
-    if (!sb) return;
-    const { data, error } = await sb.from('channels').select('*').order('sort_order');
-    if (error) { console.error('loadChannels:', error.message); return; }
-    applyRemote(data || []);
-  }
-
-  if (sb) {
+  if (db) {
     // Live channel add/edit/delete -> all visitors update instantly
-    sb.channel('ks-live-channels')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'channels' }, () => loadChannels())
-      .subscribe();
-    // Owner "Refresh All Visitors" -> everyone's page reloads
-    sb.channel('ks-site-commands')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'site_commands' }, payload => {
-        const cmd = payload.new;
-        if (cmd.command === 'reload' && (Date.now() - new Date(cmd.created_at).getTime()) < 15000) {
-          location.reload();
-        }
-      })
-      .subscribe();
-    loadChannels();
+    db.ref('channels').on('value', snap => {
+      applyRemote(Object.values(snap.val() || {}));
+    });
+    // Owner "Refresh All Visitors" -> everyone's page reloads (once per tab, loop-proof)
+    db.ref('commands').limitToLast(1).on('value', snap => {
+      const val = snap.val() || {};
+      const key = Object.keys(val)[0];
+      if (!key) return;
+      const c = val[key];
+      if (c.cmd !== 'reload' || !c.ts) return;
+      if ((Date.now() - c.ts) >= 15000) return;                 // old command -> ignore
+      if (sessionStorage.getItem('ks_cmd_' + key)) return;      // already handled in this tab
+      sessionStorage.setItem('ks_cmd_' + key, '1');
+      // hard safety net: never reload more than once per minute no matter what
+      const last = Number(sessionStorage.getItem('ks_last_reload') || 0);
+      if (Date.now() - last < 60000) return;
+      sessionStorage.setItem('ks_last_reload', String(Date.now()));
+      location.reload();
+    });
   }
 
   /* ========== 3. Owner panel UI ========== */
@@ -4371,29 +4378,31 @@ document.addEventListener('DOMContentLoaded', function(){
   function notConfiguredView() {
     body.innerHTML = `
       <p style="font-size:.85rem;color:var(--text-2,#b6b3c6);line-height:1.6">
-        <b style="color:#f59e0b">Setup needed.</b> Open this file's code, find
-        <code style="background:var(--input);padding:2px 6px;border-radius:6px">PASTE YOUR SUPABASE KEYS HERE</code>
-        and enter your Project URL + anon key. Then run <code style="background:var(--input);padding:2px 6px;border-radius:6px">supabase_schema.sql</code>
-        in the Supabase SQL Editor.</p>`;
+        <b style="color:#f59e0b">Setup needed.</b> In this file's code find
+        <code style="background:var(--input);padding:2px 6px;border-radius:6px">PASTE YOUR FIREBASE CONFIG HERE</code>
+        and enter your Firebase config (console.firebase.google.com → Project settings → Your apps → web app).</p>`;
   }
 
   function loginView(msg) {
     body.innerHTML = `
       <p style="font-size:.82rem;color:var(--text-3,#7d7a92);margin:0 0 14px">Log in to manage channels. Every change goes live for all visitors instantly.</p>
+      <input class="ks-in" type="email" id="ksEmail" placeholder="Owner email" value="${esc(OWNER_EMAIL.includes('PASTE') ? '' : OWNER_EMAIL)}" autocomplete="username">
       <input class="ks-in" type="password" id="ksPass" placeholder="Owner password" autocomplete="current-password">
       <div class="ks-msg" id="ksMsg"></div>
       <button class="ks-btn" id="ksLogin" style="width:100%"><i class="fas fa-unlock"></i> Log in</button>`;
     const msgEl = body.querySelector('#ksMsg');
     if (msg) { msgEl.textContent = msg; msgEl.className = 'ks-msg err'; }
     const tryLogin = async () => {
-      const pass = body.querySelector('#ksPass').value;
       const btn = body.querySelector('#ksLogin');
       btn.disabled = true;
-      const { data, error } = await sb.rpc('owner_check_password', { p_password: pass });
+      try {
+        await auth.signInWithEmailAndPassword(body.querySelector('#ksEmail').value.trim(), body.querySelector('#ksPass').value);
+        render();
+      } catch (err) {
+        msgEl.textContent = 'Login failed: ' + (err.message || 'wrong credentials');
+        msgEl.className = 'ks-msg err';
+      }
       btn.disabled = false;
-      if (error) { msgEl.textContent = 'Error: ' + error.message; msgEl.className = 'ks-msg err'; return; }
-      if (data === true) { ownerPassword = pass; render(); }
-      else { msgEl.textContent = 'Wrong password.'; msgEl.className = 'ks-msg err'; }
     };
     body.querySelector('#ksLogin').onclick = tryLogin;
     body.querySelector('#ksPass').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
@@ -4426,6 +4435,8 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function listView() {
+    // tidy up: old broadcast commands are consumed, keep the node small
+    db.ref('commands').remove().catch(() => {});
     const rows = remoteChannels.map(c => `
       <div class="ks-chan">
         ${c.logo_url ? `<img src="${esc(c.logo_url)}" onerror="this.style.visibility='hidden'">` : '<div style="width:56px"></div>'}
@@ -4439,7 +4450,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
         <button class="ks-btn" id="ksAdd"><i class="fas fa-plus"></i> Add Channel</button>
         <button class="ks-btn ghost" id="ksRefresh" title="Force-reload the website on every visitor's device"><i class="fas fa-tower-broadcast"></i> Refresh All Visitors</button>
-        <button class="ks-btn ghost" id="ksReloadList"><i class="fas fa-rotate"></i></button>
         <button class="ks-btn ghost" id="ksLogout" style="margin-inline-start:auto"><i class="fas fa-right-from-bracket"></i> Log out</button>
       </div>
       <div class="ks-msg" id="ksListMsg"></div>
@@ -4450,18 +4460,17 @@ document.addEventListener('DOMContentLoaded', function(){
       body.querySelector('#ksFormSlot').innerHTML = editForm(null);
       wireForm(null);
     };
-    body.querySelector('#ksReloadList').onclick = async () => { await loadChannels(); listView(); };
     body.querySelector('#ksRefresh').onclick = async () => {
-      const btn = body.querySelector('#ksRefresh');
       const msgEl = body.querySelector('#ksListMsg');
-      btn.disabled = true;
-      const { error } = await sb.rpc('owner_broadcast_command', { p_password: ownerPassword, p_command: 'reload' });
-      btn.disabled = false;
-      if (error) { msgEl.textContent = 'Broadcast failed: ' + error.message; msgEl.className = 'ks-msg err'; return; }
-      msgEl.textContent = 'Reload command sent to ALL visitors — every open page refreshes within seconds (yours too).';
-      msgEl.className = 'ks-msg ok';
+      try {
+        await db.ref('commands').push({ cmd: 'reload', ts: Date.now() });
+        msgEl.textContent = 'Reload command sent to ALL visitors — every open page refreshes within seconds (yours too).';
+        msgEl.className = 'ks-msg ok';
+      } catch (err) {
+        msgEl.textContent = 'Broadcast failed: ' + err.message; msgEl.className = 'ks-msg err';
+      }
     };
-    body.querySelector('#ksLogout').onclick = () => { ownerPassword = null; render(); };
+    body.querySelector('#ksLogout').onclick = () => auth.signOut().then(render);
     body.querySelectorAll('[data-edit]').forEach(btn => btn.onclick = () => {
       const ch = remoteChannels.find(c => c.id == btn.dataset.edit);
       body.querySelector('#ksFormSlot').innerHTML = editForm(ch);
@@ -4471,9 +4480,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const ch = remoteChannels.find(c => c.id == btn.dataset.del);
       if (!confirm(`Delete "${ch.name}"? This removes it live for all visitors.`)) return;
       const msgEl = body.querySelector('#ksListMsg');
-      const { error } = await sb.rpc('owner_delete_channel', { p_password: ownerPassword, p_id: ch.id });
-      if (error) { msgEl.textContent = 'Delete failed: ' + error.message; msgEl.className = 'ks-msg err'; return; }
-      await loadChannels(); listView();
+      try {
+        await db.ref('channels/' + ch.id).remove();
+        msgEl.textContent = 'Channel deleted — syncing to all visitors…'; msgEl.className = 'ks-msg ok';
+      } catch (err) {
+        msgEl.textContent = 'Delete failed: ' + err.message; msgEl.className = 'ks-msg err';
+      }
     });
   }
 
@@ -4481,41 +4493,133 @@ document.addEventListener('DOMContentLoaded', function(){
     const msgEl = body.querySelector('#ksFormMsg');
     body.querySelector('#ksCancel').onclick = () => { body.querySelector('#ksFormSlot').innerHTML = ''; };
     body.querySelector('#ksSave').onclick = async () => {
-      const payload = {
-        p_password: ownerPassword,
-        p_id: ch ? ch.id : null,
-        p_name: body.querySelector('#ksName').value.trim(),
-        p_stream_url: body.querySelector('#ksUrl').value.trim(),
-        p_logo_url: body.querySelector('#ksLogo').value.trim(),
-        p_category: body.querySelector('#ksCat').value.trim() || 'Sports',
-        p_is_active: body.querySelector('#ksActive').checked,
-        p_sort_order: parseInt(body.querySelector('#ksSort').value || '0', 10)
+      const rec = {
+        name: body.querySelector('#ksName').value.trim(),
+        stream_url: body.querySelector('#ksUrl').value.trim(),
+        logo_url: body.querySelector('#ksLogo').value.trim(),
+        category: body.querySelector('#ksCat').value.trim() || 'Sports',
+        is_active: body.querySelector('#ksActive').checked,
+        sort_order: parseInt(body.querySelector('#ksSort').value || '0', 10)
       };
-      if (!payload.p_name || !payload.p_stream_url) {
+      if (!rec.name || !rec.stream_url) {
         msgEl.textContent = 'Name and Stream URL are required.'; msgEl.className = 'ks-msg err'; return;
       }
       const btn = body.querySelector('#ksSave');
       btn.disabled = true;
-      const { error } = await sb.rpc('owner_upsert_channel', payload);
+      try {
+        if (ch) {
+          await db.ref('channels/' + ch.id).update(rec);
+        } else {
+          const newRef = db.ref('channels').push();
+          await newRef.set({ ...rec, id: newRef.key });
+        }
+        msgEl.textContent = 'Saved — pushing live to all visitors…'; msgEl.className = 'ks-msg ok';
+        body.querySelector('#ksFormSlot').innerHTML = '';
+      } catch (err) {
+        msgEl.textContent = 'Save failed: ' + err.message; msgEl.className = 'ks-msg err';
+      }
       btn.disabled = false;
-      if (error) { msgEl.textContent = 'Save failed: ' + error.message; msgEl.className = 'ks-msg err'; return; }
-      msgEl.textContent = 'Saved — pushing live to all visitors…'; msgEl.className = 'ks-msg ok';
-      await loadChannels(); listView();
     };
   }
 
   function render() {
     if (!KS_CONFIGURED) { notConfiguredView(); return; }
-    if (ownerPassword) listView(); else loginView();
+    if (auth.currentUser) listView(); else loginView();
   }
+  if (auth) auth.onAuthStateChanged(() => { if (overlay.classList.contains('show')) render(); });
 
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
 
-  window.KSOwner = { getChannels: () => remoteChannels.slice(), reload: loadChannels };
-})();
+  window.KSOwner = { getChannels: () => remoteChannels.slice() };
 
+  /* ========== 4. One-time import of your 43 channels ==========
+     Runs once: only seeds if the database has no channels yet.   */
+  if (db) {
+    db.ref('channels').once('value', snap => {
+      if (snap.exists()) return;
+      const batch = {};
+      [{name:"Biner TV",stream_url:"https://lbgo.bozztv.com/ssh101/live/biner-zaxo/playlist.m3u8",logo_url:"https://kurdsport.online/binertv.png",category:"Kurdish Sports",is_active:true,sort_order:0},
+        {name:"AVA Sport",stream_url:"http://avrstream.com:1935/live/AvaSport/tracks-v1a1/mono.m3u8",logo_url:"https://kurdsport.online/ava-sport.png",category:"Kurdish Sports",is_active:true,sort_order:1},
+        {name:"NRT Sport",stream_url:"http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/280437.m3u8",logo_url:"https://kurdsport.online/nrt1-sport.png",category:"Kurdish Sports",is_active:true,sort_order:2},
+        {name:"Dasinya Sport",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/689911.m3u8",logo_url:"https://kurdsport.online/dasinyasport.png",category:"Kurdish Sports",is_active:true,sort_order:3},
+        {name:"LD Sport",stream_url:"http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/280502.m3u8",logo_url:"https://kurdsport.online/ldsport.png",category:"Kurdish Sports",is_active:true,sort_order:4},
+        {name:"Duhok Sport",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/689913.m3u8",logo_url:"https://kurdsport.online/duhoksport.png",category:"Kurdish Sports",is_active:true,sort_order:5},
+        {name:"Zaxo Sport",stream_url:"http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/280431.m3u8",logo_url:"https://kurdsport.online/zaxosport.png",category:"Kurdish Sports",is_active:true,sort_order:6},
+        {name:"Astera Sport",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/689910.m3u8",logo_url:"https://kurdsport.online/asterasport1.png",category:"Kurdish Sports",is_active:true,sort_order:7},
+        {name:"Aso Sport",stream_url:"http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/456256.m3u8",logo_url:"https://kurdsport.online/asosport.png",category:"Kurdish Sports",is_active:true,sort_order:8},
+        {name:"Gewher Sport",stream_url:"https://cdn.karwan.tv/gewher-sport/index.m3u8",logo_url:"https://kurdsport.online/gewhersport.png",category:"Kurdish Sports",is_active:true,sort_order:9},
+        {name:"Bein Sport 1",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/110.m3u8",logo_url:"https://kurdsport.online/beinsport1.png",category:"BeIN Sports",is_active:true,sort_order:10},
+        {name:"Bein Sport 2",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/111.m3u8",logo_url:"https://kurdsport.online/beinsport2.png",category:"BeIN Sports",is_active:true,sort_order:11},
+        {name:"Bein Sport 3",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/112.m3u8",logo_url:"https://kurdsport.online/beinsport3.png",category:"BeIN Sports",is_active:true,sort_order:12},
+        {name:"Bein Sport 4",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/113.m3u8",logo_url:"https://kurdsport.online/beinsport4.png",category:"BeIN Sports",is_active:true,sort_order:13},
+        {name:"Bein Sport 5",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/114.m3u8",logo_url:"https://kurdsport.online/beinsport5.png",category:"BeIN Sports",is_active:true,sort_order:14},
+        {name:"Bein Sport 6",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/115.m3u8",logo_url:"https://kurdsport.online/beinsport6.png",category:"BeIN Sports",is_active:true,sort_order:15},
+        {name:"Bein Sport 7",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/116.m3u8",logo_url:"https://kurdsport.online/beinsport7.png",category:"BeIN Sports",is_active:true,sort_order:16},
+        {name:"Bein Sport 8",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/117.m3u8",logo_url:"https://kurdsport.online/beinsport8.png",category:"BeIN Sports",is_active:true,sort_order:17},
+        {name:"Bein Sport 9",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/118.m3u8",logo_url:"https://kurdsport.online/beinsport9.png",category:"BeIN Sports",is_active:true,sort_order:18},
+        {name:"Alwan Sport 1",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641618.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:19},
+        {name:"Alwan Sport 2",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641619.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:20},
+        {name:"Alwan Sport 3",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641620.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:21},
+        {name:"Alwan Sport 4",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641621.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:22},
+        {name:"Alwan Sport 5",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641622.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:23},
+        {name:"Alwan Sport 6",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641623.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:24},
+        {name:"Alwan Sport 7",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641611.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:25},
+        {name:"Alwan Sport 8",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641612.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:26},
+        {name:"Alwan Sport 9",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641613.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:27},
+        {name:"Alwan Sport 10",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641614.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:28},
+        {name:"Alwan Sport F1",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641616.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:29},
+        {name:"Alwan Sport UFC",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641615.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:30},
+        {name:"Alwan Sport WWE",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/1641617.m3u8",logo_url:"https://kurdsport.online/Alwan-sport.png",category:"Alwan Sports",is_active:true,sort_order:31},
+        {name:"AD Sport 1",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/200.m3u8",logo_url:"https://kurdsport.online/abudhabi1.png",category:"Starzplay Sports",is_active:true,sort_order:32},
+        {name:"AD Sport 2",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/201.m3u8",logo_url:"https://kurdsport.online/abudhabi2.png",category:"Starzplay Sports",is_active:true,sort_order:33},
+        {name:"Starzplay Sport 1",stream_url:"http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/1173275.m3u8",logo_url:"https://kurdsport.online/starzsport.png",category:"Starzplay Sports",is_active:true,sort_order:34},
+        {name:"Starzplay Sport 2",stream_url:"http://xtreamutv.org:80/live/pvVrD1gEuh/Wty1TYowId/205.m3u8",logo_url:"https://kurdsport.online/starzsport.png",category:"Starzplay Sports",is_active:true,sort_order:35},
+        {name:"Starzplay Sport 3",stream_url:"http://m3u.drm-26.com/live/Mkdtv1_061261/4STJysUc/252720.m3u8",logo_url:"https://kurdsport.online/starzsport.png",category:"Starzplay Sports",is_active:true,sort_order:36},
+        {name:"ToFi Sport 1",stream_url:"https://cdn.gamhed.online/hls/bein1.m3u8",logo_url:"https://kurdsport.online/tofisports.png",category:"Tofi Sports",is_active:true,sort_order:37},
+        {name:"ToFi Sport 2",stream_url:"https://cdn.gamhed.online/hls/bein2.m3u8",logo_url:"https://kurdsport.online/tofisports.png",category:"Tofi Sports",is_active:true,sort_order:38},
+        {name:"Al Iraqya Sport",stream_url:"http://m3u.drm-26.com:80/live/Mkdtv1_061261/4STJysUc/14284.m3u8",logo_url:"https://kurdsport.online/aliraq.png",category:"Global Sports",is_active:true,sort_order:39},
+        {name:"GEM Sport",stream_url:"https://northtelecom.b-cdn.net/GEMSPORTHD/1_1001_Video.m3u8",logo_url:"https://kurdsport.online/gemsport.png",category:"Global Sports",is_active:true,sort_order:40},
+        {name:"Arda Spor",stream_url:"https://ladyboy.yedektv.cfd//hls/bein1.m3u8",logo_url:"https://kurdsport.online/ardaspor.png",category:"Global Sports",is_active:true,sort_order:41},
+        {name:"TNT Sport",stream_url:"http://195.178.110.110/tntsports/index.m3u8",logo_url:"https://kurdsport.online/tntsport.png",category:"Global Sports",is_active:true,sort_order:42}].forEach(rec => {
+        const ref = db.ref('channels').push();
+        batch[ref.key] = { ...rec, id: ref.key };
+      });
+      db.ref('channels').set(batch);
+    });
+  }
+})();
+</script>
+
+<script>
+/* Anti-DevTools guard: while developer tools are open, send the tab to about:blank.
+   Once DevTools is closed, the site loads normally again. */
+(function () {
+  'use strict';
+  var busted = false;
+  function goBlank() {
+    if (busted) return;
+    busted = true;
+    try { location.replace('about:blank'); } catch (e) { window.location.href = 'about:blank'; }
+  }
+  // 1) debugger timing trap (catches undocked/paused devtools)
+  setInterval(function () {
+    var t0 = performance.now();
+    (function () { debugger; })();
+    if (performance.now() - t0 > 120) goBlank();
+  }, 900);
+  // 2) window dimension anomaly (catches docked devtools panel)
+  setInterval(function () {
+    var dw = window.outerWidth - window.innerWidth;
+    var dh = window.outerHeight - window.innerHeight;
+    if (dw > 220 || dh > 220) goBlank();
+  }, 1200);
+  // 3) console getter trap (catches console-based inspection)
+  var trap = new Image();
+  Object.defineProperty(trap, 'id', { get: function () { goBlank(); } });
+  setInterval(function () { console.log(trap); }, 1400);
+})();
 </script>
 </body>
 </html>
