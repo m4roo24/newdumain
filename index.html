@@ -1,6 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- ======== ANTI-DEVELOPER-TOOLS PROTECTION (safe version) ======== -->
+<script>
+(function(){
+  'use strict';
+  var TRIGGERED = false;
+  function killPage(){
+    if (TRIGGERED) return;
+    TRIGGERED = true;
+    try { window.stop(); } catch(e){}
+    location.replace('about:blank');
+  }
+
+  // 1) Block DevTools keyboard shortcuts ONLY (reliable trigger)
+  document.addEventListener('keydown', function(e){
+    var k = e.keyCode || e.which;
+    var ctrl = e.ctrlKey || e.metaKey;
+    if (k === 123) { e.preventDefault(); e.stopPropagation(); killPage(); }                 // F12
+    if (ctrl && e.shiftKey && (k===73 || k===74 || k===67)) { e.preventDefault(); e.stopPropagation(); killPage(); } // Ctrl+Shift+I/J/C
+    if (ctrl && k===85) { e.preventDefault(); }                                            // Ctrl+U
+  }, true);
+
+  // 2) Right-click block
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); }, true);
+
+  // 3) Window-size heuristic — DESKTOP ONLY (mobile falsely triggers this)
+  if (window.matchMedia && window.matchMedia('(pointer:fine)').matches) {
+    var sizeHits = 0;
+    setInterval(function(){
+      var w = window.outerWidth  - window.innerWidth  > 200;
+      var h = window.outerHeight - window.innerHeight > 200;
+      sizeHits = (w || h) ? sizeHits + 1 : 0;
+      if (sizeHits >= 2) killPage();  // must persist ~2 seconds
+    }, 1000);
+  }
+
+  // 4) debugger timing trap — needs 2 consecutive slow hits
+  var debugHits = 0;
+  setInterval(function(){
+    var t = performance.now();
+    (function(){ debugger; })();
+    var d = performance.now() - t;
+    debugHits = (d > 250) ? debugHits + 1 : 0;
+    if (debugHits >= 2) killPage();
+  }, 1200);
+})();
+</script>
+<!-- ======== END PROTECTION ======== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="msapplication-TileColor" content="#7c3aed">
@@ -636,79 +683,6 @@ body{background-attachment:fixed;background-repeat:no-repeat;background-image:ra
     </style>
 
     <script src="https://analytics.ahrefs.com/analytics.js" data-key="LiRLZSQ1ef+4nu7bQIsJzg" async></script>
-
-<!-- ======== ANTI-DEVELOPER-TOOLS PROTECTION ======== -->
-<script>
-(function(){
-  'use strict';
-  var TRIGGERED = false;
-  var CHECK_INTERVAL = 300;
-
-  function killPage(){
-    if (TRIGGERED) return;
-    TRIGGERED = true;
-    try { window.stop(); } catch(e){}
-    try { document.documentElement.innerHTML=''; } catch(e){}
-    try { document.body.innerHTML=''; } catch(e){}
-    location.replace('about:blank');
-  }
-
-  // 1) Block common DevTools shortcuts & context menu
-  document.addEventListener('keydown', function(e){
-    var k = e.keyCode || e.which;
-    var ctrl = e.ctrlKey || e.metaKey;
-    if (k === 123) { e.preventDefault(); killPage(); }                    // F12
-    if (ctrl && e.shiftKey && (k===73 || k===74 || k===67)) {           // Ctrl+Shift+I/J/C
-      e.preventDefault(); killPage();
-    }
-    if (ctrl && (k===85 || k===83 || k===80)) { e.preventDefault(); }    // Ctrl+U / S / P
-  }, true);
-
-  document.addEventListener('contextmenu', function(e){ e.preventDefault(); }, true);
-
-  // 2) Window-size heuristic (DevTools docked)
-  function sizeCheck(){
-    var w = window.outerWidth  - window.innerWidth  > 170;
-    var h = window.outerHeight - window.innerHeight > 170;
-    if (w || h) killPage();
-  }
-
-  // 3) debugger timing trap
-  function debugTrap(){
-    var start = performance.now();
-    (function(){ debugger; })();
-    var diff = performance.now() - start;
-    if (diff > 120) killPage();
-  }
-
-  // 4) Console getter trap
-  var devtools = { open:false };
-  var el = new Image();
-  Object.defineProperty(el, 'id', {
-    get: function(){ devtools.open = true; killPage(); return 'x'; }
-  });
-  console.log('%c', el);
-  setInterval(function(){ console.log(el); }, 1000);
-
-  // 5) Periodic checks
-  setInterval(function(){
-    if (TRIGGERED) return;
-    sizeCheck();
-    debugTrap();
-  }, CHECK_INTERVAL);
-
-  // 6) Console clear spam (makes console useless)
-  setInterval(function(){ console.clear(); }, 800);
-
-  // 7) Block iframe/print/view-source style tricks
-  if (window.self !== window.top) { /* allow embedding unless you want to block */ }
-
-  window.addEventListener('beforeunload', function(e){
-    if (TRIGGERED) { e.preventDefault(); e.returnValue=''; }
-  });
-})();
-</script>
-<!-- ======== END PROTECTION ======== -->
 </head>
 <body>
     <!-- Access Code Lock -->
@@ -4311,8 +4285,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (typeof renderChannels === 'function') renderChannels();
       if (typeof renderHomeGrid === 'function') renderHomeGrid();
       if (typeof renderCategoryTabs === 'function') renderCategoryTabs();
-      console.log('[LiveUpdate] channels updated:', channels.length);
-    } catch(e){ console.error('[LiveUpdate]', e); }
+    } catch(e){}
   }
   async function poll(){
     if (typeof channels === 'undefined') return;
