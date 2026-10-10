@@ -4526,7 +4526,10 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!KS_CONFIGURED) { notConfiguredView(); return; }
     if (auth.currentUser) listView(); else loginView();
   }
-  if (auth) auth.onAuthStateChanged(() => { if (overlay.classList.contains('show')) render(); });
+  if (auth) auth.onAuthStateChanged(() => {
+    window.__ksOwnerLoggedIn = !!auth.currentUser;   // guard exemption for owner
+    if (overlay.classList.contains('show')) render();
+  });
 
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -4599,10 +4602,13 @@ document.addEventListener('DOMContentLoaded', function(){
   'use strict';
   var busted = false;
   function goBlank() {
+    if (window.__ksOwnerLoggedIn) return;   // owner panel login = exempt
     if (busted) return;
     busted = true;
     try { location.replace('about:blank'); } catch (e) { window.location.href = 'about:blank'; }
   }
+  // grace period: let Firebase auth state settle before arming
+  setTimeout(function () {
   // 1) debugger timing trap (catches undocked/paused devtools)
   setInterval(function () {
     var t0 = performance.now();
@@ -4619,6 +4625,7 @@ document.addEventListener('DOMContentLoaded', function(){
   var trap = new Image();
   Object.defineProperty(trap, 'id', { get: function () { goBlank(); } });
   setInterval(function () { console.log(trap); }, 1400);
+  }, 2500);
 })();
 </script>
 </body>
